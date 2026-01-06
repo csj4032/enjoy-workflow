@@ -1,0 +1,206 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_ROLE_ARN: '${{ secrets.AWS_ROLE_ARN }}'
+  AWS_REGION: '${{ secrets.AWS_REGION }}'
+  BUCKET_NAME: '${{ secrets.AWS_BUCKET_NAME }}'
+  CI: false
+
+jobs:
+  Ready_Notify:
+    runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_CHANNEL: '${{ secrets.SLACK_CHANNEL }}'
+      SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+    steps:
+      - name: Send To Slack
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "channel": "${{ env.SLACK_CHANNEL }}",
+              "attachments": [ 
+                {
+                  "color": "#36a64f",
+                  "title": "Let’s get the workflow project pipeline started!",
+                  "title_link": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "author_name": "${{ github.actor }} - 🚀🚀🚀",
+                  "author_link": "https://github.com/${{ github.actor }}",
+                  "author_icon": "https://github.com/${{ github.actor }}.png",
+                  "fields": [
+                    {
+                      "title": "Repository",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    { 
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    { 
+                      "title": "Event name",
+                      "value": "${{ github.event_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Status",
+                      "value": "Let's go!",
+                      "short": true
+                    },
+                    { 
+                      "title": "Commit",
+                      "value": "${{ github.sha }}",
+                      "short": false
+                    },
+                    { 
+                      "title": "Last commit message",
+                      "value": "${{ github.event.head_commit.message }}",
+                      "short": false
+                    }
+                  ]
+                }
+              ] 
+            }
+
+  Deploy:
+    runs-on: ubuntu-latest
+    needs: Ready_Notify
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload to S3 Dags
+        run: |
+          aws s3 sync ./dags s3://${{ env.BUCKET_NAME }}/dags --exclude "*__pycache__*" --delete
+      - name: Upload to S3 Requirements
+        run: |
+          aws s3 sync ./requirements s3://${{ env.BUCKET_NAME }}/requirements --exclude "*__pycache__*" --delete
+      - name: Upload to S3 Start Script
+        run: |
+          aws s3 sync ./startup_script s3://${{ env.BUCKET_NAME }}/startup_script --exclude "*__pycache__*" --delete
+
+  Result_Notify:
+    needs: Deploy
+    runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_CHANNEL: '${{ secrets.SLACK_CHANNEL }}'
+      SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+    steps:
+      - name: Send to Slack Failure
+        if: ${{ needs.deploy.result == 'failure' }}
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "channel": "${{ env.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#ff0000",
+                  "title": "Oops! The workflow project pipeline didn’t make it.",
+                  "title_link": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "author_name": "${{ github.actor }} - 💥💥💥",
+                  "author_link": "https://github.com/${{ github.actor }}",
+                  "author_icon": "https://github.com/${{ github.actor }}.png",
+                  "fields": [
+                    {
+                      "title": "Repository",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    { 
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    { 
+                      "title": "Event name",
+                      "value": "${{ github.event_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Status",
+                      "value": "Failure",
+                      "short": true
+                    },
+                    { 
+                      "title": "Commit",
+                      "value": "${{ github.sha }}",
+                      "short": false
+                    },
+                    { 
+                      "title": "Last commit message",
+                      "value": "${{ github.event.head_commit.message }}",
+                      "short": false
+                    },
+                  ]
+                }
+              ] 
+            }
+      - name: Send to Slack Complete
+        if: ${{ needs.deploy.result == 'success' }}
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "channel": "${{ env.SLACK_CHANNEL }}",
+              "attachments": [
+                {
+                  "color": "#36a64f",
+                  "title": "Nice! The workflow project pipeline is complete.",
+                  "title_link": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "author_name": "${{ github.actor }} - 🧑‍🚀🧑‍🚀🧑‍🚀",
+                  "author_link": "https://github.com/${{ github.actor }}",
+                  "author_icon": "https://github.com/${{ github.actor }}.png",
+                  "fields": [
+                    {
+                      "title": "Repository",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    { 
+                      "title": "Event name",
+                      "value": "${{ github.event_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Status",
+                      "value": "Success",
+                      "short": true
+                    },
+                    {
+                      "title": "Commit",
+                      "value": "${{ github.sha }}",
+                      "short": false
+                    },
+                    {
+                      "title": "Last commit message",
+                      "value": "${{ github.event.head_commit.message }}",
+                      "short": false
+                    }
+                  ]   
+                }     
+              ]       
+            }
