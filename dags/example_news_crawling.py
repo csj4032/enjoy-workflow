@@ -1,5 +1,6 @@
 import html
 import logging
+import re
 import time
 from datetime import datetime
 from datetime import timedelta
@@ -11,12 +12,14 @@ import pendulum
 import requests
 from airflow.models import Variable
 from airflow.providers.google.suite.hooks.sheets import GSheetsHook
+from airflow.providers.mysql.hooks.mysql import MySqlHook
 from airflow.providers.slack.hooks.slack import SlackHook
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag, task, task_group
 from airflow.utils.types import DagRunType
 from bs4 import BeautifulSoup
 from slack_sdk.web import SlackResponse
+from newspaper import Article
 
 _slack_conn_id = Variable.get("mmix-slack-conn-id")
 _slack_channel_id = Variable.get("mmix-slack-channel-id")
@@ -25,6 +28,23 @@ _naver_client_secret = Variable.get("mmix-naver-client-secret")
 _naver_openai_search_news_url = Variable.get("mmix-naver-openai-search-news-url")
 _news_keyword_google_sheet_id = Variable.get("mmix-news-keyword-google-sheet-id")
 _gcp_conn_id = Variable.get("mmix-gcp-conn-id")
+_mysql_conn_id = Variable.get("mmix-aws-aurora-mysql-conn-id")
+
+
+def download_article(index: int, url: str, language="ko") -> str:
+    try:
+        article = Article(url, language=language)
+        article.download()
+        article.parse()
+        return re.sub(r'\n+', '\n', article.text)
+    except Exception as e:
+        logging.error(f"[DOWNLOAD][{index}] URL: {url} ERROR: {e}")
+        return ""
+
+
+def chunk_generator(dataframe, chunk_size):
+    for i in range(0, len(dataframe), chunk_size):
+        yield dataframe[i:i + chunk_size]
 
 
 def strip_html(raw_html: str) -> str:
@@ -86,7 +106,7 @@ def get_head_line_blocks(date: str, subject_articles: list[dict], limit: int = 2
 
 @dag(dag_id="example_news_crawling",
      default_args={
-         "start_date": datetime(2025, 12, 1),
+         "start_date": datetime(2026, 1, 1),
          "retries": 0,
          "retry_delay": timedelta(seconds=10),
      },
@@ -129,6 +149,7 @@ def example_news_crawling():
             dataframe_since_1h["published"] = dataframe_since_1h["published_dt"].dt.strftime("%Y-%m-%d %H:%M:%S %z")
             dataframe_selection = dataframe_since_1h[["subject", "published", "keyword", "title", "summary", "original_link", "link"]]
             dataframe_selection = dataframe_selection.assign(title=dataframe_selection["title"].apply(strip_html))
+            dataframe_selection["description"] = dataframe_selection['original_link'].apply(lambda x: download_article(index, x))
             kwargs['ti'].xcom_push(key=f'download_naver_news_{index}', value=dataframe_selection.to_dict(orient='records'))
 
         download_naver_news.expand_kwargs(crawling_naver_news())
@@ -137,6 +158,50 @@ def example_news_crawling():
     def merge_naver_news(indices=5, **kwargs: Any) -> list[dict[Hashable, Any]]:
         logging.info("Merging DataFrames from Naver News")
         return [item for sublist in [kwargs['ti'].xcom_pull(task_ids='crawling_naver_news_group.download_naver_news', key=f'download_naver_news_{index}') for index in range(indices)] for item in sublist]
+
+    @task(task_id="load_to_mysql")
+    def load_to_mysql(mysql_conn_id: str, chuck: int = 10, **kwargs: Any) -> None:
+        logging.info("Loading data into Aurora MySQL")
+        hook = MySqlHook(mysql_conn_id=mysql_conn_id)
+        connection = None
+        cursor = None
+        dataframe = pd.DataFrame(kwargs['ti'].xcom_pull(task_ids='merge_naver_news'))
+        dataframe_filtered = dataframe[dataframe["title"].notna() & dataframe["original_link"].notna() & (dataframe["title"].str.strip() != "") & (dataframe["original_link"].str.strip() != "")]
+        dataframe_filtered["published"] = pd.to_datetime(dataframe_filtered["published"], errors="coerce").dt.tz_localize(None)
+
+        if len(dataframe_filtered) == 0:
+            logging.warning("No data to load into Aurora MySQL")
+            return
+        logging.info(f"DataFrame to be loaded into Aurora: {dataframe_filtered.info()}")
+        total = int(np.ceil(len(dataframe_filtered) / chuck))
+        dataframe_group = chunk_generator(dataframe_filtered, chuck)
+        try:
+            connection = hook.get_conn()
+            cursor = connection.cursor()
+            cursor.execute("BEGIN;")
+            for index, df in enumerate(dataframe_group):
+                logging.info(f"Loading DataFrame {index + 1}/{total} into MySQL... {df.info()}")
+                values_list = []
+                for _, row in df.iterrows():
+                    values = [row['subject'], row['keyword'], row['published'], row['title'], row['summary'], row['description'], row['original_link'], row['link']]
+                    logging.info(f"load_to_aurora type: published:{row['published']} keyword:{row['keyword']} title:{len(row['title'])} link:{row['link']} original_link:{row['original_link']}")
+                    values_list.append(tuple(values))
+                insert_query = "INSERT INTO mmix.news_articles (subject, keyword, published, title, summary, description, original_link, link) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                cursor.executemany(insert_query, values_list)
+            connection.commit()
+        except Exception as e:
+            logging.error(f"Error loading data into Aurora: {e}")
+            if connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+            logging.info("Connection and cursor closed")
+
+        logging.info("Data loaded into Aurora successfully.")
 
     @task
     def head_line_send_to_slack(slack_trend_conn_id, slack_trend_channel_id, **kwargs) -> SlackResponse:
@@ -152,9 +217,10 @@ def example_news_crawling():
     download_news_keyword_task = download_stock_keyword(_gcp_conn_id, _news_keyword_google_sheet_id, "시트1!A1:Z1000")
     crawling_naver_news_group_task = crawling_naver_news_group()
     merge_news_task = merge_naver_news()
+    load_to_mysql_task = load_to_mysql(_mysql_conn_id)
     head_line_send_to_slack_task = head_line_send_to_slack(_slack_conn_id, _slack_channel_id)
 
-    (start_task >> download_news_keyword_task >> crawling_naver_news_group_task >> merge_news_task >> head_line_send_to_slack_task >> end_task)
+    (start_task >> download_news_keyword_task >> crawling_naver_news_group_task >> merge_news_task >> load_to_mysql_task >> head_line_send_to_slack_task >> end_task)
 
 
 example_news_crawling()
