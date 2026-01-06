@@ -1,4 +1,3 @@
-import logging
 import random
 from datetime import datetime, timedelta
 
@@ -10,6 +9,7 @@ from faker import Faker
 from great_expectations.core.expectation_suite import ExpectationSuite
 
 from common import mmix_slack_operator as slack_operator
+from common import mmix_validator as mmix_validator
 
 
 @dag(dag_id="example_great_expectations",
@@ -42,8 +42,8 @@ def example_great_expectations():
             })
         return pd.DataFrame(rows)
 
-    @task
-    def gx_validation(dataframe: pd.DataFrame, **kwargs) -> str:
+    @task(multiple_outputs=True)
+    def gx_validation(dataframe: pd.DataFrame, **kwargs) -> None:
         context = gx.get_context()
         data_source = context.data_sources.add_pandas(name="datasource_name")
         data_asset = data_source.add_dataframe_asset(name="asset_name")
@@ -57,13 +57,13 @@ def example_great_expectations():
         validator.expect_column_values_to_not_be_null("name")
         validator.expect_column_values_to_not_be_null("email")
         validator.expect_column_values_to_be_between("age", min_value=1, max_value=100)
-        logging.info(f"Analysis Logs: {validator.validate()}")
+        mmix_validator.etl_analysis_logs(Variable.get("mmix-aws-aurora-mysql-conn-id"), kwargs["dag"].dag_id, kwargs["run_id"], kwargs["logical_date"], validator.validate())
 
     start_task = EmptyOperator(task_id="start_empty")
     end_task = EmptyOperator(task_id="end_empty")
     data_generation_task = data_generation()
     gx_validation_task = gx_validation(data_generation_task)
-    (start_task >> data_generation_task >> gx_validation_task >> end_task)
+    start_task >> data_generation_task >> gx_validation_task >> end_task
 
 
 example_great_expectations()

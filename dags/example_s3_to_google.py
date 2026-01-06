@@ -83,8 +83,8 @@ def example_s3_to_google():
         return hook.update_values(spreadsheet_id=_customer_google_sheet_id, range_=range_, values=values, value_input_option="RAW")
 
     data_generation_task = data_generation()
-    load_to_s3_task = load_to_s3(data_generation_task, _s3_datalakehouse_bucket_name, "data/example.parquet")
-    download_from_s3_task = download_from_s3(_s3_datalakehouse_bucket_name, "data/example.parquet")
+    load_to_s3_task = load_to_s3(data_generation_task, _s3_datalakehouse_bucket_name, "data/customer.parquet")
+    download_from_s3_task = download_from_s3(_s3_datalakehouse_bucket_name, "data/customer.parquet")
     load_to_google_drive_task = load_to_google_drive(download_from_s3_task)
     (data_generation_task >> load_to_s3_task >> download_from_s3_task >> load_to_google_drive_task)
 

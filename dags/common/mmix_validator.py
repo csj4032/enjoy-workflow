@@ -14,15 +14,15 @@ def build_gx_pandas_validator(dataframe, suite_name: str = "pandas_suite", datas
     return validator
 
 
-def etl_analysis_logs(mysql_conn_id: str, dag_id: str, run_id: str, logical_date, data) -> None:
+def etl_analysis_logs(mysql_conn_id: str, dag_id: str, run_id: str, logical_datetime, data) -> None:
     logging.info(f"data: {data}")
     from airflow.providers.mysql.hooks.mysql import MySqlHook
     hook = MySqlHook(mysql_conn_id=mysql_conn_id)
     connection = hook.get_conn()
-    analysis_logs = get_etl_analysis_logs(dag_id, run_id, logical_date, data)
+    analysis_logs = get_etl_analysis_logs(dag_id, run_id, logical_datetime, data)
     logging.info(f"Analysis Logs: {analysis_logs}")
-    columns_ = ["run_name", "run_id", "entity", "instance", "name", "value", "execution_datetime"]
-    insert_query = f"INSERT INTO etl_analysis_logs ({', '.join(columns_)}) VALUES ({', '.join([f'%({col_})s' for col_ in columns_])}) ON DUPLICATE KEY UPDATE value = VALUES(value)"
+    columns_ = ["run_name", "run_id", "entity", "instance", "name", "value", "logical_datetime"]
+    insert_query = f"INSERT INTO mmix.etl_analysis_logs ({', '.join(columns_)}) VALUES ({', '.join([f'%({col_})s' for col_ in columns_])}) ON DUPLICATE KEY UPDATE value = VALUES(value)"
     try:
         with connection.cursor() as cursor:
             cursor.executemany(insert_query, analysis_logs)
@@ -36,12 +36,12 @@ def etl_analysis_logs(mysql_conn_id: str, dag_id: str, run_id: str, logical_date
         connection.close()
 
 
-def get_etl_analysis_logs(dag_id, run_id, logical_date, data) -> list:
+def get_etl_analysis_logs(dag_id, run_id, logical_datetime, data) -> list:
     processed_logs: list[dict] = []
     append_log = processed_logs.append
 
     def add_log(entity: str, instance: str, name: str, value: float) -> None:
-        append_log({"run_name": dag_id, "run_id": run_id, "entity": entity, "instance": instance, "name": name, "value": float(value), "execution_datetime": logical_date})
+        append_log({"run_name": dag_id, "run_id": run_id, "entity": entity, "instance": instance, "name": name, "value": float(value), "logical_datetime": logical_datetime})
 
     for expectation in data.get("results", []):
         config = expectation.get("expectation_config") or {}
@@ -70,12 +70,40 @@ def get_etl_analysis_logs(dag_id, run_id, logical_date, data) -> list:
             add_log(entity="Column", instance=column_name, name="Completeness", value=completeness)
 
         elif expectation_type == "expect_column_values_to_be_unique":
-            missing_count = result_metrics.get("missing_count")
-            if missing_count is None:
+            unexpected_count = result_metrics.get("unexpected_count")
+            missing_count = result_metrics.get("missing_count", 0)
+            if unexpected_count is None:
                 continue
-            uniqueness = 1.0 if missing_count == 0 else 0.0
+            uniqueness = 1.0 if (unexpected_count == 0 and (missing_count or 0) == 0) else 0.0
             add_log(entity="Column", instance=column_name, name="Uniqueness", value=uniqueness)
 
+        elif expectation_type == "expect_column_values_to_be_between":
+            element_count = result_metrics.get("element_count")
+            unexpected_count = result_metrics.get("unexpected_count")
+            unexpected_percent = result_metrics.get("unexpected_percent")  # out-of-range 비율
+            missing_count = result_metrics.get("missing_count")
+            missing_percent = result_metrics.get("missing_percent")
+
+            if missing_count is not None:
+                add_log(entity="Column", instance=column_name, name="MissingCount", value=missing_count)
+            if missing_percent is not None:
+                add_log(entity="Column", instance=column_name, name="MissingRate", value=missing_percent / 100.0)
+
+            if unexpected_count is not None:
+                add_log(entity="Column", instance=column_name, name="OutOfRangeCount", value=unexpected_count)
+            if unexpected_percent is not None:
+                add_log(entity="Column", instance=column_name, name="OutOfRangeRate", value=unexpected_percent / 100.0)
+
+            out_rate = None
+            if result_metrics.get("unexpected_percent_total") is not None:
+                out_rate = result_metrics["unexpected_percent_total"] / 100.0
+            elif unexpected_percent is not None:
+                out_rate = unexpected_percent / 100.0
+
+            if out_rate is not None:
+                add_log(entity="Column", instance=column_name, name="RangeCompliance", value=max(0.0, 1.0 - out_rate))
+            if element_count is not None:
+                add_log(entity="Column", instance=column_name, name="ElementCount", value=element_count)
         else:
             continue
 
