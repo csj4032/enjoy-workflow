@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from datetime import timedelta
 
 from airflow.models import Variable
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
@@ -8,24 +9,23 @@ from airflow.sdk import dag, task
 
 from common import mmix_slack_operator as slack_operator
 
-_slack_conn_id = Variable.get("mmix-slack-conn-id")
-_slack_channel_id = Variable.get("mmix-slack-channel-id")
-_mysql_conn_id = Variable.get("mmix-aws-aurora-mysql-conn-id")
-_aws_conn_id = Variable.get("mmix-aws-conn-id")
-_bucket_name = Variable.get("mmix-aws-s3-workflow-bucket-name")
-_prefix = Variable.get("mmix-aws-s3-workflow-bucket-prefix")
-
 
 @dag(dag_id="example_connection",
-     schedule_interval=None,
+     default_args={
+         "depends_on_past": False,
+         "retries": 1,
+         "retry_delay": timedelta(seconds=10),
+     },
+     start_date=datetime(2026, 1, 1),
+     schedule=None,
      catchup=False,
-     start_date=datetime(2026, 1, 10),
-     on_success_callback=slack_operator.build_dag_success_callback(_slack_conn_id, _slack_channel_id),
-     on_failure_callback=slack_operator.build_dag_failure_callback(_slack_conn_id, _slack_channel_id),
+     on_success_callback=slack_operator.build_dag_success_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
+     on_failure_callback=slack_operator.build_dag_failure_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
      tags=["MMIX", "Connection", "Example"])
 def example_connection():
     @task
     def connected_aws_mysql(mysql_conn_id: str) -> str:
+        logging.info("mysql_conn_id: %s", mysql_conn_id)
         mysql_hook = MySqlHook(mysql_conn_id=mysql_conn_id)
         mysql_conn = mysql_hook.get_conn()
         cursor = mysql_conn.cursor()
@@ -34,15 +34,16 @@ def example_connection():
         logging.info(f"Connected to MySQL database: {database_name[0]}")
         return database_name
 
-    @task()
+    @task
     def connected_aws_s3(aws_conn_id: str, bucket_name: str, prefix: str = "") -> list:
+        logging.info("aws_conn_id: %s, bucket_name: %s, prefix: %s", aws_conn_id, bucket_name, prefix)
         hook = S3Hook(aws_conn_id=aws_conn_id)
         keys = hook.list_keys(bucket_name=bucket_name, prefix=prefix)
         logging.info("keys: %s", keys)
         return keys
 
-    connected_aws_mysql_task = connected_aws_mysql(_mysql_conn_id)
-    connected_aws_s3_task = connected_aws_mysql(_aws_conn_id, _bucket_name, _prefix)
+    connected_aws_mysql_task = connected_aws_mysql(Variable.get("mmix-aws-aurora-mysql-conn-id"))
+    connected_aws_s3_task = connected_aws_s3(Variable.get("mmix-aws-conn-id"), Variable.get("mmix-aws-s3-workflow-bucket-name"), Variable.get("mmix-aws-s3-workflow-bucket-prefix"))
     connected_aws_mysql_task >> connected_aws_s3_task
 
 
