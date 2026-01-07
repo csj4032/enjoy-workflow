@@ -59,7 +59,7 @@ def example_s3_to_google():
     def load_to_s3(dataframe: pd.DataFrame, bucket_name: str, object_key: str) -> bytes:
         logging.info(f"Uploading DataFrame to s3://{bucket_name}/{object_key} ...")
         buffer = io.BytesIO()
-        dataframe.to_parquet(buffer, engine="pyarrow", index=False)
+        dataframe.to_parquet(buffer, index=False)
         buffer.seek(0)
         S3Hook(aws_conn_id=_aws_conn_id).load_bytes(bytes_data=buffer.getvalue(), bucket_name=bucket_name, key=object_key, replace=True)
 
@@ -83,8 +83,8 @@ def example_s3_to_google():
         return hook.update_values(spreadsheet_id=_customer_google_sheet_id, range_=range_, values=values, value_input_option="RAW")
 
     data_generation_task = data_generation()
-    load_to_s3_task = load_to_s3(data_generation_task, _s3_datalakehouse_bucket_name, "data/customer.parquet")
-    download_from_s3_task = download_from_s3(_s3_datalakehouse_bucket_name, "data/customer.parquet")
+    load_to_s3_task = load_to_s3(data_generation_task, _s3_datalakehouse_bucket_name, "mmix/customer/customer.parquet")
+    download_from_s3_task = download_from_s3(_s3_datalakehouse_bucket_name, "mmix/customer/customer.parquet")
     load_to_google_drive_task = load_to_google_drive(download_from_s3_task)
     (data_generation_task >> load_to_s3_task >> download_from_s3_task >> load_to_google_drive_task)
 

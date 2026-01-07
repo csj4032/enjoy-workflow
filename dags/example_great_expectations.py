@@ -18,7 +18,7 @@ from common import mmix_validator as mmix_validator
          "retries": 1,
          "retry_delay": timedelta(seconds=10),
      },
-     schedule=None,
+     schedule="*/5 * * * *",
      catchup=False,
      start_date=datetime(2026, 1, 1),
      on_success_callback=slack_operator.build_dag_success_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
@@ -61,7 +61,7 @@ def example_great_expectations():
 
     start_task = EmptyOperator(task_id="start_empty")
     end_task = EmptyOperator(task_id="end_empty")
-    data_generation_task = data_generation()
+    data_generation_task = data_generation(n = random.randint(10, 10000))
     gx_validation_task = gx_validation(data_generation_task)
     start_task >> data_generation_task >> gx_validation_task >> end_task
 
