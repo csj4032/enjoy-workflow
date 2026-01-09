@@ -29,16 +29,17 @@ def example_great_expectations():
     def data_generation(fake=Faker("ko_KR"), n: int = 1000) -> pd.DataFrame:
         rows = []
         for i in range(1, n + 1):
-            name = fake.name()
-            email = fake.email() if random.random() > 0.10 else None
-            age = random.randint(18, 65) if random.random() > 0.05 else None
-            signup = (datetime.now() - timedelta(days=random.randint(0, 365))).date().isoformat()
             rows.append({
-                "id": i,
-                "name": name if random.random() > 0.02 else None,
-                "email": email,
-                "age": age,
-                "signup_date": signup
+                "id": i + 1,
+                "name": fake.name(),
+                "age": fake.random_int(min=20, max=65),
+                "weight": fake.random_int(min=10, max=250),
+                "height": fake.random_int(min=10, max=250),
+                "gender": random.choice(['남성', '여성']),
+                "address": fake.address(),
+                "job": fake.job(),
+                "email": fake.email(),
+                "signup": (datetime.now() - timedelta(days=random.randint(0, 365))).date().isoformat()
             })
         return pd.DataFrame(rows)
 
@@ -61,7 +62,7 @@ def example_great_expectations():
 
     start_task = EmptyOperator(task_id="start_empty")
     end_task = EmptyOperator(task_id="end_empty")
-    data_generation_task = data_generation(n = random.randint(10, 10000))
+    data_generation_task = data_generation(n=random.randint(10, 10000))
     gx_validation_task = gx_validation(data_generation_task)
     start_task >> data_generation_task >> gx_validation_task >> end_task
 

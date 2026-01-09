@@ -38,7 +38,7 @@ def download_article(index: int, url: str, language="ko") -> str:
         article.parse()
         return re.sub(r'\n+', '\n', article.text)
     except Exception as e:
-        logging.error(f"[DOWNLOAD][{index}] URL: {url} ERROR: {e}")
+        logging.error(f"[download][{index}] URL: {url} error: {e}")
         return ""
 
 
@@ -76,7 +76,7 @@ def search_naver_news(subject: str, keyword: str, display=10, page=1, sort="date
         response.raise_for_status()
         return response.json().get("items", [])
     except Exception as e:
-        logging.error(f"[NAVER] 검색 실패: {subject} {keyword}, {e}")
+        logging.error(f"[naver] 검색 실패: {subject} {keyword}, {e}")
         return []
 
 
@@ -118,7 +118,7 @@ def example_news_crawling():
     end_task = EmptyOperator(task_id="end_task")
 
     @task
-    def download_stock_keyword(gcp_conn_id: str, spreadsheet_id: str, range_: str = "시트1!A1:Z1000") -> list[dict[str, Any]]:
+    def download_stock_keyword(gcp_conn_id: str, spreadsheet_id: str, range_: str = "시트1!A1:Z1000") -> list[dict]:
         hook = GSheetsHook(gcp_conn_id=gcp_conn_id)
         values = hook.get_values(spreadsheet_id, range_)
         logging.info(f"Downloaded values from Google Sheet: {spreadsheet_id}, Range: {range_}\n{values}")

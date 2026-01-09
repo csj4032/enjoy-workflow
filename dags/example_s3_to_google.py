@@ -42,16 +42,17 @@ def example_s3_to_google():
         logging.info(f"Generating {n} rows of fake data ...")
         rows = []
         for i in range(1, n + 1):
-            name = fake.name()
-            email = fake.email() if random.random() > 0.10 else None
-            age = random.randint(18, 65) if random.random() > 0.05 else None
-            signup = (datetime.now() - timedelta(days=random.randint(0, 365))).date().isoformat()
             rows.append({
-                "id": i,
-                "name": name if random.random() > 0.02 else None,
-                "email": email,
-                "age": age,
-                "signup_date": signup
+                "id": i + 1,
+                "name": fake.name(),
+                "age": fake.random_int(min=20, max=65),
+                "weigh": fake.random_int(min=10, max=250),
+                "height": fake.random_int(min=10, max=250),
+                "gender": random.choice(['남성', '여성']),
+                "address": fake.address(),
+                "job": fake.job(),
+                "email": fake.email(),
+                "signup": (datetime.now() - timedelta(days=random.randint(0, 365))).date().isoformat()
             })
         return pd.DataFrame(rows)
 
@@ -83,8 +84,8 @@ def example_s3_to_google():
         return hook.update_values(spreadsheet_id=_customer_google_sheet_id, range_=range_, values=values, value_input_option="RAW")
 
     data_generation_task = data_generation()
-    load_to_s3_task = load_to_s3(data_generation_task, _s3_datalakehouse_bucket_name, "mmix/customer/customer.parquet")
-    download_from_s3_task = download_from_s3(_s3_datalakehouse_bucket_name, "mmix/customer/customer.parquet")
+    load_to_s3_task = load_to_s3(data_generation_task, _s3_datalakehouse_bucket_name, "mmix/customers/customers.parquet")
+    download_from_s3_task = download_from_s3(_s3_datalakehouse_bucket_name, "mmix/customers/customers.parquet")
     load_to_google_drive_task = load_to_google_drive(download_from_s3_task)
     (data_generation_task >> load_to_s3_task >> download_from_s3_task >> load_to_google_drive_task)
 

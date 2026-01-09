@@ -32,7 +32,7 @@ def example_connection():
         cursor.execute("SELECT DATABASE();")
         database_name = cursor.fetchone()
         logging.info(f"Connected to MySQL database: {database_name[0]}")
-        return database_name
+        return database_name[0]
 
     @task
     def connected_aws_s3(aws_conn_id: str, bucket_name: str, prefix: str = "") -> list:
