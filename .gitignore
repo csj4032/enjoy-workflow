@@ -1,5 +1,3 @@
 .idea
-/notebooks/.ipynb_checkpoints
-/notebooks/host/data
-/notebooks/docker/.ipynb_checkpoints
-/notebooks/host/.ipynb_checkpoints
+notebooks/**/.ipynb_checkpoints/
+notebooks/host/data
