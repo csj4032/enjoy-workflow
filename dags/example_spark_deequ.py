@@ -1,17 +1,22 @@
+import base64
 import json
 import time
+import uuid
 from datetime import timedelta
 from typing import Optional, Dict, Any
 
 from airflow.exceptions import AirflowException
 from airflow.models import Variable
 from airflow.providers.http.hooks.http import HttpHook
-from airflow.sdk import dag, task
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.sdk import dag, task, BaseHook
 from pendulum import datetime
 
 from common import mmix_slack_operator as slack_operator
 
 _livy_server_http_conn_id = Variable.get("mmix-livy-server-http-conn-id")
+_mysql_conn = BaseHook.get_connection(Variable.get("mmix-mysql-primary-observability-conn-id"))
+_mysql_json = json.dumps({"host": _mysql_conn.host, "port": _mysql_conn.port, "user": _mysql_conn.login, "password": _mysql_conn.password, "database": _mysql_conn.schema}, separators=(",", ":"))
 
 
 def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, extra_options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -46,9 +51,18 @@ def example_spark():
     @task
     def submit_batch(**kwargs) -> int:
         payload = {
-            "name": f"{kwargs['dag'].dag_id}-{kwargs['run_id']}",
-            "args": ["--dag_id", kwargs["dag"].dag_id, "--run_id", kwargs["run_id"], "--logical_datatime", kwargs["logical_date"].to_iso8601_string()],
+            "name": f"{kwargs['dag'].dag_id}-{kwargs['run_id']}-try{kwargs['ti'].try_number}-{uuid.uuid4().hex[:8]}",
             "file": "s3a://mmix-prod-dataengineer-workreduce/src/example_deequ.py",
+            "pyFiles": [
+                "s3a://mmix-prod-dataengineer-workreduce/dist/enjoy_workreduce-0.0.1-py3-none-any.whl"
+            ],
+            "args": [
+                "--dag_id", kwargs["dag"].dag_id,
+                "--run_id", kwargs["run_id"],
+                "--secret", base64.b64encode(_mysql_json.encode("utf-8")).decode("ascii"),
+                "--logical_datetime", kwargs["logical_date"].in_timezone("UTC").strftime("%Y-%m-%d %H:%M:%S"),
+                "--environment", Variable.get("mmix-environment"),
+            ],
             "conf": {
                 "spark.executor.cores": "1",
                 "spark.executor.memory": "1g",
@@ -57,12 +71,12 @@ def example_spark():
                 "spark.hadoop.fs.s3a.path.style.access": "true",
                 "spark.hadoop.fs.s3a.access.key": "mmix",
                 "spark.hadoop.fs.s3a.secret.key": "mmixmmix",
-                "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
+                "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",
             }
         }
         res = _http_json(conn_id=_livy_server_http_conn_id, method="POST", endpoint="/batches", data=payload)
         batch_id_ = res.get("id")
-        if batch_id is None:
+        if batch_id_ is None:
             raise AirflowException(f"Livy did not return batch id. response={res}")
 
         return int(batch_id_)
@@ -99,9 +113,12 @@ def example_spark():
         log = _http_json(conn_id=_livy_server_http_conn_id, method="GET", endpoint=f"/batches/{batch_id_}/log?from=0&size=200")
         print(f"[Livy batch log] batch_id={batch_id_}\n{json.dumps(log, indent=2)}")
 
-    batch_id = submit_batch()
-    wait_for_batch(batch_id)
-    fetch_log(batch_id)
+    start_task = EmptyOperator(task_id="start_empty")
+    end_task = EmptyOperator(task_id="end_empty")
+    batch_id_task = submit_batch()
+    wait_for_batch_task = wait_for_batch(batch_id_task)
+    fetch_log_task = fetch_log(batch_id_task)
+    start_task >> batch_id_task >> wait_for_batch_task >> fetch_log_task >> end_task
 
 
 example_spark()
