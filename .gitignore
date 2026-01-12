@@ -1,4 +1,5 @@
 .idea
 dags/**/.ipynb_checkpoints/
+dags/**/__pycache__/
 notebooks/**/.ipynb_checkpoints/
 notebooks/host/data
