@@ -64,8 +64,8 @@ def example_connection():
         logging.info("Keys: %s", keys)
         return keys
 
-    connected_primary_mysql_task = connected_mysql_primary(Variable.get("mmix-mysql-primary-conn-id"))
-    connected_replication_mysql_task = connected_mysql_replication(Variable.get("mmix-mysql-replication-conn-id"))
+    connected_primary_mysql_task = connected_mysql_primary(Variable.get("mmix-mysql-primary-mmix-conn-id"))
+    connected_replication_mysql_task = connected_mysql_replication(Variable.get("mmix-mysql-replication-mmix-conn-id"))
     connected_elasticsearch_task = connected_elasticsearch(Variable.get("mmix-elasticsearch-conn-id"))
     connected_aws_s3_task = connected_aws_s3(Variable.get("mmix-aws-conn-id"), Variable.get("mmix-aws-s3-workflow-bucket-name"), Variable.get("mmix-aws-s3-workflow-bucket-prefix"))
     connected_primary_mysql_task >> connected_replication_mysql_task >> connected_elasticsearch_task >> connected_aws_s3_task

@@ -14,18 +14,18 @@ def build_gx_pandas_validator(dataframe, suite_name: str = "pandas_suite", datas
     return validator
 
 
-def etl_analysis_logs(mysql_conn_id: str, dag_id: str, run_id: str, logical_datetime, data) -> None:
+def data_quality_logs(mysql_conn_id: str, dag_id: str, run_id: str, logical_datetime, data) -> None:
     logging.info(f"data: {data}")
     from airflow.providers.mysql.hooks.mysql import MySqlHook
     hook = MySqlHook(mysql_conn_id=mysql_conn_id)
     connection = hook.get_conn()
-    analysis_logs = get_etl_analysis_logs(dag_id, run_id, logical_datetime, data)
-    logging.info(f"Analysis Logs: {analysis_logs}")
+    logs = get_data_quality_logs(dag_id, run_id, logical_datetime, data)
+    logging.info(f"Analysis Logs: {logs}")
     columns_ = ["run_name", "run_id", "entity", "instance", "name", "value", "logical_datetime"]
-    insert_query = f"INSERT INTO mmix.etl_analysis_logs ({', '.join(columns_)}) VALUES ({', '.join([f'%({col_})s' for col_ in columns_])}) ON DUPLICATE KEY UPDATE value = VALUES(value)"
+    insert_query = f"INSERT INTO data_quality_logs ({', '.join(columns_)}) VALUES ({', '.join([f'%({col_})s' for col_ in columns_])}) ON DUPLICATE KEY UPDATE value = VALUES(value)"
     try:
         with connection.cursor() as cursor:
-            cursor.executemany(insert_query, analysis_logs)
+            cursor.executemany(insert_query, logs)
         connection.commit()
     except Exception as e:
         logging.error(f"Error inserting ETL analysis logs: {e}")
@@ -36,7 +36,7 @@ def etl_analysis_logs(mysql_conn_id: str, dag_id: str, run_id: str, logical_date
         connection.close()
 
 
-def get_etl_analysis_logs(dag_id, run_id, logical_datetime, data) -> list:
+def get_data_quality_logs(dag_id, run_id, logical_datetime, data) -> list:
     processed_logs: list[dict] = []
     append_log = processed_logs.append
 
