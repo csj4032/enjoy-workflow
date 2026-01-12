@@ -28,7 +28,7 @@ _naver_client_secret = Variable.get("mmix-naver-client-secret")
 _naver_openai_search_news_url = Variable.get("mmix-naver-openai-search-news-url")
 _news_keyword_google_sheet_id = Variable.get("mmix-news-keyword-google-sheet-id")
 _gcp_conn_id = Variable.get("mmix-gcp-conn-id")
-_mysql_conn_id = Variable.get("mmix-aws-aurora-mysql-conn-id")
+_mysql_conn_id = Variable.get("mmix-mysql-primary-conn-id")
 
 
 def download_article(index: int, url: str, language="ko") -> str:

@@ -4,11 +4,10 @@ from datetime import timedelta
 
 from airflow.models import Variable
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from airflow.providers.elasticsearch.hooks.elasticsearch import ElasticsearchPythonHook, ElasticsearchSQLHook
+from airflow.providers.elasticsearch.hooks.elasticsearch import ElasticsearchSQLHook
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 from airflow.sdk import dag, task, TriggerRule
 from elastic_transport import ObjectApiResponse
-from elasticsearch import Elasticsearch
 
 from common import mmix_slack_operator as slack_operator
 
@@ -27,7 +26,18 @@ from common import mmix_slack_operator as slack_operator
      tags=["MMIX", "Connection", "Example"])
 def example_connection():
     @task
-    def connected_aws_mysql(mysql_conn_id: str) -> str:
+    def connected_mysql_primary(mysql_conn_id: str) -> str:
+        logging.info("mysql_conn_id: %s", mysql_conn_id)
+        mysql_hook = MySqlHook(mysql_conn_id=mysql_conn_id)
+        mysql_conn = mysql_hook.get_conn()
+        cursor = mysql_conn.cursor()
+        cursor.execute("SELECT DATABASE();")
+        database_name = cursor.fetchone()
+        logging.info(f"Connected to MySQL Database: {database_name[0]}")
+        return database_name[0]
+
+    @task(trigger_rule=TriggerRule.ALL_DONE)
+    def connected_mysql_replication(mysql_conn_id: str) -> str:
         logging.info("mysql_conn_id: %s", mysql_conn_id)
         mysql_hook = MySqlHook(mysql_conn_id=mysql_conn_id)
         mysql_conn = mysql_hook.get_conn()
@@ -54,10 +64,11 @@ def example_connection():
         logging.info("Keys: %s", keys)
         return keys
 
-    connected_aws_mysql_task = connected_aws_mysql(Variable.get("mmix-aws-aurora-mysql-conn-id"))
-    connected_elasticsearch_task = connected_elasticsearch(Variable.get("mmix-aws-elasticsearch-conn-id"))
+    connected_primary_mysql_task = connected_mysql_primary(Variable.get("mmix-mysql-primary-conn-id"))
+    connected_replication_mysql_task = connected_mysql_replication(Variable.get("mmix-mysql-replication-conn-id"))
+    connected_elasticsearch_task = connected_elasticsearch(Variable.get("mmix-elasticsearch-conn-id"))
     connected_aws_s3_task = connected_aws_s3(Variable.get("mmix-aws-conn-id"), Variable.get("mmix-aws-s3-workflow-bucket-name"), Variable.get("mmix-aws-s3-workflow-bucket-prefix"))
-    connected_aws_mysql_task >> connected_elasticsearch_task >> connected_aws_s3_task
+    connected_primary_mysql_task >> connected_replication_mysql_task >> connected_elasticsearch_task >> connected_aws_s3_task
 
 
 example_connection()

@@ -68,7 +68,6 @@ def get_etl_analysis_logs(dag_id, run_id, logical_datetime, data) -> list:
                 continue
             completeness = 0.0 if unexpected_count > 0 else 1.0
             add_log(entity="Column", instance=column_name, name="Completeness", value=completeness)
-
         elif expectation_type == "expect_column_values_to_be_unique":
             unexpected_count = result_metrics.get("unexpected_count")
             missing_count = result_metrics.get("missing_count", 0)
@@ -76,11 +75,10 @@ def get_etl_analysis_logs(dag_id, run_id, logical_datetime, data) -> list:
                 continue
             uniqueness = 1.0 if (unexpected_count == 0 and (missing_count or 0) == 0) else 0.0
             add_log(entity="Column", instance=column_name, name="Uniqueness", value=uniqueness)
-
         elif expectation_type == "expect_column_values_to_be_between":
             element_count = result_metrics.get("element_count")
             unexpected_count = result_metrics.get("unexpected_count")
-            unexpected_percent = result_metrics.get("unexpected_percent")  # out-of-range 비율
+            unexpected_percent = result_metrics.get("unexpected_percent")
             missing_count = result_metrics.get("missing_count")
             missing_percent = result_metrics.get("missing_percent")
 
