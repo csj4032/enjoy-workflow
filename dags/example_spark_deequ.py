@@ -15,13 +15,12 @@ from pendulum import datetime
 from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
 from common import mmix_slack_operator as slack_operator
 
-_livy_server_http_conn_id = Variable.get("mmix-livy-server-http-conn-id")
-_s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
-_s3_endpoint = Variable.get("mmix-aws-s3-endpoint")
 _aws_conn_id = Variable.get("mmix-aws-conn-id")
+_environment = Variable.get("mmix-environment")
+_s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
+_livy_server_http_conn_id = Variable.get("mmix-livy-server-http-conn-id")
 _mysql_conn = BaseHook.get_connection(Variable.get("mmix-mysql-primary-observability-conn-id"))
 _mysql_json = json.dumps({"host": _mysql_conn.host, "port": _mysql_conn.port, "user": _mysql_conn.login, "password": _mysql_conn.password, "database": _mysql_conn.schema}, separators=(",", ":"))
-_environment = Variable.get("mmix-environment")
 
 
 def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, extra_options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -51,7 +50,7 @@ def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str
      catchup=False,
      on_success_callback=slack_operator.build_dag_success_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
      on_failure_callback=slack_operator.build_dag_failure_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
-     tags=["MMIX", "Example", "Spark"])
+     tags=["MMIX", "Example", "Spark", "Deequ"])
 def example_spark_deequ():
     @task
     def submit_batch(**kwargs) -> int:
