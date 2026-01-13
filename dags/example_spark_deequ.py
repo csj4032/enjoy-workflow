@@ -2,17 +2,17 @@ import base64
 import json
 import logging
 import time
-import uuid
 from datetime import timedelta
 from typing import Optional, Dict, Any
 
 from airflow.exceptions import AirflowException
 from airflow.models import Variable
+from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
 from airflow.providers.http.hooks.http import HttpHook
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag, task, BaseHook
 from pendulum import datetime
-from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
+
 from common import mmix_slack_operator as slack_operator
 
 _aws_conn_id = Variable.get("mmix-aws-conn-id")
@@ -59,8 +59,8 @@ def example_spark_deequ():
         session = hook.get_session()
         logging.info(f"Connecting to {connection.extra_dejson.get("s3_endpoint_url")}, {connection.extra_dejson.get("region")}")
         payload = {
-            "name": f"{kwargs['dag'].dag_id}-{kwargs['run_id']}-try{kwargs['ti'].try_number}-{uuid.uuid4().hex[:8]}",
-            "file": f"s3a://{_s3_bucket_name}/src/example_deequ.py",
+            "name": f"{kwargs['dag'].dag_id}-{kwargs['run_id']}-try{kwargs['ti'].try_number}",
+            "file": f"s3a://{_s3_bucket_name}/src/example_spark_deequ.py",
             "pyFiles": [
                 f"s3a://{_s3_bucket_name}/dist/enjoy_workreduce-0.0.1-py3-none-any.whl"
             ],

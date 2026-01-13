@@ -9,6 +9,7 @@ from airflow.providers.apache.livy.sensors.livy import LivySensor
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag, BaseHook
 from pendulum import datetime
+
 from common import mmix_slack_operator as slack_operator
 
 _slack_conn_id = Variable.get("mmix-slack-conn-id")
@@ -42,11 +43,11 @@ def example_spark_mysql():
     submit_spark_task = LivyOperator(
         task_id="submit_example_spark_mysql_job",
         livy_conn_id=_livy_conn_id,
-        file=f"s3a://{_s3_bucket_name}/src/example-spark-mysql.py",
-        pyFiles=[
+        file=f"s3a://{_s3_bucket_name}/src/example_spark_mysql.py",
+        py_files=[
             f"s3a://{_s3_bucket_name}/dist/enjoy_workreduce-0.0.1-py3-none-any.whl"
         ],
-        name="airflow-livy-annotation",
+        name="{{ dag.dag_id }}-{{ run_id }}-try{{ ti.try_number }}",
         args=[
             "--dag_id", "{{ dag.dag_id }}",
             "--run_id", "{{ run_id }}",
