@@ -15,6 +15,7 @@ from pendulum import datetime
 from common import mmix_slack_operator as slack_operator
 
 _livy_server_http_conn_id = Variable.get("mmix-livy-server-http-conn-id")
+_s3_bucket_name = Variable.get("mmix-prod-dataengineer-workreduce")
 _mysql_conn = BaseHook.get_connection(Variable.get("mmix-mysql-primary-observability-conn-id"))
 _mysql_json = json.dumps({"host": _mysql_conn.host, "port": _mysql_conn.port, "user": _mysql_conn.login, "password": _mysql_conn.password, "database": _mysql_conn.schema}, separators=(",", ":"))
 
@@ -52,9 +53,9 @@ def example_spark():
     def submit_batch(**kwargs) -> int:
         payload = {
             "name": f"{kwargs['dag'].dag_id}-{kwargs['run_id']}-try{kwargs['ti'].try_number}-{uuid.uuid4().hex[:8]}",
-            "file": "s3a://mmix-prod-dataengineer-workreduce/src/example_deequ.py",
+            "file": f"s3a://{_s3_bucket_name}/src/example_deequ.py",
             "pyFiles": [
-                "s3a://mmix-prod-dataengineer-workreduce/dist/enjoy_workreduce-0.0.1-py3-none-any.whl"
+                f"s3a://{_s3_bucket_name}/dist/enjoy_workreduce-0.0.1-py3-none-any.whl"
             ],
             "args": [
                 "--dag_id", kwargs["dag"].dag_id,
