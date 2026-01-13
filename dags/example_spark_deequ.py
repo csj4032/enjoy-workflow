@@ -15,7 +15,7 @@ from pendulum import datetime
 from common import mmix_slack_operator as slack_operator
 
 _livy_server_http_conn_id = Variable.get("mmix-livy-server-http-conn-id")
-_s3_bucket_name = Variable.get("mmix-prod-dataengineer-workreduce")
+_s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
 _mysql_conn = BaseHook.get_connection(Variable.get("mmix-mysql-primary-observability-conn-id"))
 _mysql_json = json.dumps({"host": _mysql_conn.host, "port": _mysql_conn.port, "user": _mysql_conn.login, "password": _mysql_conn.password, "database": _mysql_conn.schema}, separators=(",", ":"))
 
@@ -36,7 +36,7 @@ def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str
     return json.loads(text) if text else {}
 
 
-@dag(dag_id="example_spark",
+@dag(dag_id="example_spark_deequ",
      default_args={
          "depends_on_past": False,
          "retries": None,
@@ -48,7 +48,7 @@ def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str
      on_success_callback=slack_operator.build_dag_success_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
      on_failure_callback=slack_operator.build_dag_failure_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
      tags=["MMIX", "Example", "Spark"])
-def example_spark():
+def example_spark_deequ():
     @task
     def submit_batch(**kwargs) -> int:
         payload = {
@@ -122,4 +122,4 @@ def example_spark():
     start_task >> batch_id_task >> wait_for_batch_task >> fetch_log_task >> end_task
 
 
-example_spark()
+example_spark_deequ()
