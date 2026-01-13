@@ -11,6 +11,7 @@ from airflow.sdk import dag, BaseHook
 from pendulum import datetime
 
 from common import mmix_slack_operator as slack_operator
+from common import mmix_utils as utils
 
 _slack_conn_id = Variable.get("mmix-slack-conn-id")
 _slack_channel_id = Variable.get("mmix-slack-channel-id")
@@ -18,8 +19,8 @@ _aws_conn_id = Variable.get("mmix-aws-conn-id")
 _environment = Variable.get("mmix-environment")
 _livy_conn_id = Variable.get("mmix-livy-server-conn-id")
 _s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
-_mysql_conn = BaseHook.get_connection(Variable.get("mmix-mysql-primary-observability-conn-id"))
-_mysql_json = json.dumps({"host": _mysql_conn.host, "port": _mysql_conn.port, "user": _mysql_conn.login, "password": _mysql_conn.password, "database": _mysql_conn.schema}, separators=(",", ":"))
+_mysql_primary_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-primary-mmix-conn-id"))
+_mysql_observability_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-observability-mmix-conn-id"))
 
 
 @dag(dag_id="example_spark_mysql",
@@ -51,7 +52,8 @@ def example_spark_mysql():
         args=[
             "--dag_id", "{{ dag.dag_id }}",
             "--run_id", "{{ run_id }}",
-            "--secret", base64.b64encode(_mysql_json.encode("utf-8")).decode("ascii"),
+            "--mysql_primary_secret", base64.b64encode(_mysql_primary_json.encode("utf-8")).decode("ascii"),
+            "--mysql_observability_secret", base64.b64encode(_mysql_observability_json.encode("utf-8")).decode("ascii"),
             "--logical_datetime", "{{logical_date.in_timezone('UTC').strftime('%Y-%m-%d %H:%M:%S')}}",
             "--environment", _environment,
         ],
