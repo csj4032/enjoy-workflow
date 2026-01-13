@@ -19,8 +19,8 @@ _aws_conn_id = Variable.get("mmix-aws-conn-id")
 _environment = Variable.get("mmix-environment")
 _livy_conn_id = Variable.get("mmix-livy-server-conn-id")
 _s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
-_mysql_primary_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-primary-mmix-conn-id"))
-_mysql_observability_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-observability-mmix-conn-id"))
+_mysql_mmix_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-primary-mmix-conn-id"))
+_mysql_observability_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-primary-observability-conn-id"))
 
 
 @dag(dag_id="example_spark_mysql",
@@ -52,7 +52,7 @@ def example_spark_mysql():
         args=[
             "--dag_id", "{{ dag.dag_id }}",
             "--run_id", "{{ run_id }}",
-            "--mysql_primary_secret", base64.b64encode(_mysql_primary_json.encode("utf-8")).decode("ascii"),
+            "--mysql_mmix_secret", base64.b64encode(_mysql_mmix_json.encode("utf-8")).decode("ascii"),
             "--mysql_observability_secret", base64.b64encode(_mysql_observability_json.encode("utf-8")).decode("ascii"),
             "--logical_datetime", "{{logical_date.in_timezone('UTC').strftime('%Y-%m-%d %H:%M:%S')}}",
             "--environment", _environment,

@@ -20,7 +20,7 @@ _aws_conn_id = Variable.get("mmix-aws-conn-id")
 _environment = Variable.get("mmix-environment")
 _s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
 _livy_server_http_conn_id = Variable.get("mmix-livy-server-http-conn-id")
-_mysql_observability_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-observability-mmix-conn-id"))
+_mysql_observability_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-primary-observability-conn-id"))
 
 
 def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, extra_options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
