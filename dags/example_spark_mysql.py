@@ -1,5 +1,4 @@
 import base64
-import json
 from datetime import timedelta
 
 from airflow.models import Variable
@@ -7,7 +6,7 @@ from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
 from airflow.providers.apache.livy.operators.livy import LivyOperator
 from airflow.providers.apache.livy.sensors.livy import LivySensor
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.sdk import dag, BaseHook
+from airflow.sdk import dag
 from pendulum import datetime
 
 from common import mmix_slack_operator as slack_operator
