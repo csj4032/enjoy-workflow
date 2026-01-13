@@ -6,7 +6,7 @@ def build_dag_success_callback(slack_conn_id: str, slack_channel: str):
         SlackAPIPostOperator(
             task_id=f"slack_success_notify",
             slack_conn_id=slack_conn_id,
-            username=f"LiDAR",
+            username=f"Genie",
             text=f":white_check_mark: DAG *{context['dag'].dag_id}* 성공!\nRun ID: `{context['run_id']}`",
             channel=slack_channel,
         ).execute(context=context)
@@ -19,7 +19,7 @@ def build_dag_failure_callback(slack_conn_id: str, slack_channel: str):
         SlackAPIPostOperator(
             task_id=f"slack_fail_notify",
             slack_conn_id=slack_conn_id,
-            username=f"LiDAR",
+            username=f"Genie",
             text=f"<!channel> :x: DAG *{context['dag'].dag_id}* 실패 ❗\nRun ID: `{context['run_id']}`\nLog: {context['task_instance'].log_url}",
             channel=slack_channel,
         ).execute(context=context)
@@ -32,7 +32,7 @@ def build_dag_skipped_callback(slack_conn_id: str, slack_channel: str):
         SlackAPIPostOperator(
             task_id=f"slack_skipped_notify",
             slack_conn_id=slack_conn_id,
-            username=f"LiDAR",
+            username=f"Genie",
             text=f":warning: DAG *{context['dag'].dag_id}* 일부 작업이 건너뛰어졌습니다.\nRun ID: `{context['run_id']}`\nLog: {context['task_instance'].log_url}",
             channel=slack_channel,
         ).execute(context=context)

@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import time
 import uuid
 from datetime import timedelta
@@ -11,13 +12,16 @@ from airflow.providers.http.hooks.http import HttpHook
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag, task, BaseHook
 from pendulum import datetime
-
+from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
 from common import mmix_slack_operator as slack_operator
 
 _livy_server_http_conn_id = Variable.get("mmix-livy-server-http-conn-id")
 _s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
+_s3_endpoint = Variable.get("mmix-aws-s3-endpoint")
+_aws_conn_id = Variable.get("mmix-aws-conn-id")
 _mysql_conn = BaseHook.get_connection(Variable.get("mmix-mysql-primary-observability-conn-id"))
 _mysql_json = json.dumps({"host": _mysql_conn.host, "port": _mysql_conn.port, "user": _mysql_conn.login, "password": _mysql_conn.password, "database": _mysql_conn.schema}, separators=(",", ":"))
+_environment = Variable.get("mmix-environment")
 
 
 def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, extra_options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -51,6 +55,10 @@ def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str
 def example_spark_deequ():
     @task
     def submit_batch(**kwargs) -> int:
+        hook = AwsBaseHook(aws_conn_id=_aws_conn_id)
+        connection = hook.get_connection(_aws_conn_id)
+        session = hook.get_session()
+        logging.info(f"Connecting to {connection.extra_dejson.get("s3_endpoint_url")}, {connection.extra_dejson.get("region")}")
         payload = {
             "name": f"{kwargs['dag'].dag_id}-{kwargs['run_id']}-try{kwargs['ti'].try_number}-{uuid.uuid4().hex[:8]}",
             "file": f"s3a://{_s3_bucket_name}/src/example_deequ.py",
@@ -62,16 +70,17 @@ def example_spark_deequ():
                 "--run_id", kwargs["run_id"],
                 "--secret", base64.b64encode(_mysql_json.encode("utf-8")).decode("ascii"),
                 "--logical_datetime", kwargs["logical_date"].in_timezone("UTC").strftime("%Y-%m-%d %H:%M:%S"),
-                "--environment", Variable.get("mmix-environment"),
+                "--environment", _environment,
             ],
             "conf": {
                 "spark.executor.cores": "1",
                 "spark.executor.memory": "1g",
                 "spark.driver.memory": "1g",
-                "spark.hadoop.fs.s3a.endpoint": "http://minio:9000",
+                "spark.hadoop.fs.s3a.endpoint": connection.extra_dejson.get("s3_endpoint_url"),
+                "spark.hadoop.fs.s3a.endpoint.region": connection.extra_dejson.get("region"),
                 "spark.hadoop.fs.s3a.path.style.access": "true",
-                "spark.hadoop.fs.s3a.access.key": "mmix",
-                "spark.hadoop.fs.s3a.secret.key": "mmixmmix",
+                "spark.hadoop.fs.s3a.access.key": session.get_credentials().access_key,
+                "spark.hadoop.fs.s3a.secret.key": session.get_credentials().secret_key,
                 "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",
             }
         }
