@@ -57,9 +57,6 @@ def example_spark_mysql():
             "--environment", _environment,
         ],
         conf={
-            "spark.executor.cores": "1",
-            "spark.executor.memory": "1g",
-            "spark.driver.memory": "1g",
             "spark.hadoop.fs.s3a.endpoint": connection.extra_dejson.get("endpoint_url"),
             "spark.hadoop.fs.s3a.endpoint.region": connection.extra_dejson.get("region_name"),
             "spark.hadoop.fs.s3a.path.style.access": "true",
