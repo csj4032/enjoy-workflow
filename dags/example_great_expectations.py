@@ -62,7 +62,7 @@ def example_great_expectations():
 
     start_task = EmptyOperator(task_id="start_empty")
     end_task = EmptyOperator(task_id="end_empty")
-    data_generation_task = data_generation(n=random.randint(10, 10000))
+    data_generation_task = data_generation(n=random.randint(100, 15000))
     gx_validation_task = gx_validation(data_generation_task)
     start_task >> data_generation_task >> gx_validation_task >> end_task
 
