@@ -1,11 +1,10 @@
---constraint "https://raw.githubusercontent.com/apache/airflow/constraints-3.1.5/constraints-3.12.txt"
-
 --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-3.1.6/constraints-3.12.txt"
 
 apache-airflow-providers-amazon==9.19.0
 apache-airflow-providers-apache-livy==4.5.1
 apache-airflow-providers-apache-spark==5.4.2
 apache-airflow-providers-apache-kafka==1.11.2
+apache-airflow-providers-apache-flink==1.8.1
 apache-airflow-providers-google==19.3.0
 apache-airflow-providers-elasticsearch==6.4.2
 apache-airflow-providers-influxdb==2.10.1
