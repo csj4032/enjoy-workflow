@@ -1,5 +1,5 @@
 {
-  "name": "mysql-source-connector",
+  "name": "mmix-mysql-source-connector",
   "config": {
     "connector.class": "io.debezium.connector.mysql.MySqlConnector",
     "tasks.max": "1",
@@ -11,7 +11,7 @@
     "database.server.name": "mmix-inventory",
     "database.include.list": "mmix",
     "snapshot.mode": "initial",
-    "topic.prefix": "debezium.mysql.source",
+    "topic.prefix": "mmix.mysql.source",
     "transforms": "unwrap",
     "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
     "transforms.unwrap.drop.tombstones": "true",
