@@ -38,3 +38,4 @@ jupyterlab==4.5.1
 Faker
 Authlib==1.6.6
 fastavro==1.12.1
+zstandard==0.25.0
