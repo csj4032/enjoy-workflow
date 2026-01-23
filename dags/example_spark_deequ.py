@@ -50,6 +50,7 @@ def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str
      catchup=False,
      on_success_callback=slack_operator.build_dag_success_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
      on_failure_callback=slack_operator.build_dag_failure_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
+     description="An example DAG to run Spark job that performs data quality checks using Deequ.",
      tags=["MMIX", "Example", "Spark", "Deequ"])
 def example_spark_deequ():
     @task
@@ -126,8 +127,7 @@ def example_spark_deequ():
     end_task = EmptyOperator(task_id="end_empty")
     batch_id_task = submit_batch()
     wait_for_batch_task = wait_for_batch(batch_id_task)
-    fetch_log_task = fetch_log(batch_id_task)
-    start_task >> batch_id_task >> wait_for_batch_task >> fetch_log_task >> end_task
+    start_task >> batch_id_task >> wait_for_batch_task >> fetch_log(batch_id_task) >> end_task
 
 
 example_spark_deequ()

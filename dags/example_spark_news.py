@@ -1,4 +1,5 @@
 import base64
+import logging
 from datetime import timedelta
 
 from airflow.models import Variable
@@ -18,11 +19,11 @@ _aws_conn_id = Variable.get("mmix-aws-conn-id")
 _environment = Variable.get("mmix-environment")
 _livy_conn_id = Variable.get("mmix-livy-server-conn-id")
 _s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
-_mysql_mmix_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-primary-mmix-conn-id"))
+_mysql_external_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-primary-external-conn-id"))
 _postgresql_observability_json = utils.build_postgresql_conn_json(Variable.get("mmix-postgresql-observability-conn-id"))
 
 
-@dag(dag_id="example_spark_mysql",
+@dag(dag_id="example_spark_news",
      default_args={
          "depends_on_past": False,
          "retries": None,
@@ -33,17 +34,18 @@ _postgresql_observability_json = utils.build_postgresql_conn_json(Variable.get("
      catchup=False,
      on_success_callback=slack_operator.build_dag_success_callback(_slack_conn_id, _slack_channel_id),
      on_failure_callback=slack_operator.build_dag_failure_callback(_slack_conn_id, _slack_channel_id),
-     tags=["MMIX", "Example", "Spark", "Mysql"])
-def example_spark_mysql():
+     description="An example DAG to run Spark job that processes news data from Mysql and perform data quality checks using Deequ.",
+     tags=["MMIX", "Example", "Spark", "News", "Mysql"])
+def example_spark_news():
     hook = AwsBaseHook(aws_conn_id=_aws_conn_id)
     connection = hook.get_connection(_aws_conn_id)
     session = hook.get_session()
     start_task = EmptyOperator(task_id="start_empty")
     end_task = EmptyOperator(task_id="end_empty")
     submit_spark_task = LivyOperator(
-        task_id="submit_example_spark_mysql_job",
+        task_id="submit_example_spark_news_job",
         livy_conn_id=_livy_conn_id,
-        file=f"s3a://{_s3_bucket_name}/src/example_spark_mysql.py",
+        file=f"s3a://{_s3_bucket_name}/src/example_spark_news.py",
         py_files=[
             f"s3a://{_s3_bucket_name}/dist/enjoy_workreduce-0.0.1-py3-none-any.whl"
         ],
@@ -51,7 +53,7 @@ def example_spark_mysql():
         args=[
             "--dag_id", "{{ dag.dag_id }}",
             "--run_id", "{{ run_id }}",
-            "--mysql_mmix_secret", base64.b64encode(_mysql_mmix_json.encode("utf-8")).decode("ascii"),
+            "--mysql_external_secret", base64.b64encode(_mysql_external_json.encode("utf-8")).decode("ascii"),
             "--postgresql_observability_secret", base64.b64encode(_postgresql_observability_json.encode("utf-8")).decode("ascii"),
             "--logical_datetime", "{{logical_date.in_timezone('UTC').strftime('%Y-%m-%d %H:%M:%S')}}",
             "--environment", _environment,
@@ -73,9 +75,9 @@ def example_spark_mysql():
     )
 
     wait_spark_task = LivySensor(
-        task_id="wait_example_spark_mysql_job",
+        task_id="wait_example_spark_news_job",
         livy_conn_id=_livy_conn_id,
-        batch_id="{{ ti.xcom_pull(task_ids='submit_example_spark_mysql_job') }}",
+        batch_id="{{ ti.xcom_pull(task_ids='submit_example_spark_news_job') }}",
         poke_interval=15,
         timeout=60 * 60,
         mode="reschedule",
@@ -84,4 +86,4 @@ def example_spark_mysql():
     start_task >> submit_spark_task >> wait_spark_task >> end_task
 
 
-example_spark_mysql()
+example_spark_news()

@@ -28,7 +28,7 @@ _naver_client_secret = Variable.get("mmix-naver-client-secret")
 _naver_openai_search_news_url = Variable.get("mmix-naver-openai-search-news-url")
 _news_keyword_google_sheet_id = Variable.get("mmix-news-keyword-google-sheet-id")
 _gcp_conn_id = Variable.get("mmix-gcp-conn-id")
-_mysql_conn_id = Variable.get("mmix-mysql-primary-mmix-conn-id")
+_mysql_conn_id = Variable.get("mmix-mysql-primary-external-conn-id")
 
 
 def download_article(index: int, url: str, language="ko") -> str:
@@ -186,7 +186,7 @@ def example_news_crawling():
                     values = [row['subject'], row['keyword'], row['published'], row['title'], row['summary'], row['description'], row['original_link'], row['link']]
                     logging.info(f"load_to_aurora type: published:{row['published']} keyword:{row['keyword']} title:{len(row['title'])} link:{row['link']} original_link:{row['original_link']}")
                     values_list.append(tuple(values))
-                insert_query = "INSERT INTO mmix.news_articles (subject, keyword, published, title, summary, description, original_link, link) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                insert_query = "INSERT INTO external.news (subject, keyword, published, title, summary, description, original_link, link) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
                 cursor.executemany(insert_query, values_list)
             connection.commit()
         except Exception as e:

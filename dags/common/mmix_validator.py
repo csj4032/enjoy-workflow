@@ -15,12 +15,12 @@ def build_gx_pandas_validator(dataframe, suite_name: str = "pandas_suite", datas
     return validator
 
 
-def data_quality_logs(postgres_conn_id: str, dag_id: str, run_id: str, logical_datetime, data) -> None:
+def validation_results_store(postgres_conn_id: str, dag_id: str, run_id: str, logical_datetime, data) -> None:
     logging.info(f"postgres_conn_id : {postgres_conn_id}")
     logging.info(f"Start inserting ETL analysis logs: {dag_id}, {run_id}, {logical_datetime}")
     hook = PostgresHook(postgres_conn_id=postgres_conn_id)
     connection = hook.get_conn()
-    logs = get_data_quality_logs(dag_id, run_id, logical_datetime, data)
+    logs = get_validation_results_store(dag_id, run_id, logical_datetime, data)
     logging.info(f"Analysis Logs: {logs}")
     columns_ = ["run_name", "run_id", "entity", "instance", "name", "value", "logical_datetime"]
     insert_query = f"""
@@ -45,7 +45,7 @@ def data_quality_logs(postgres_conn_id: str, dag_id: str, run_id: str, logical_d
         connection.close()
 
 
-def get_data_quality_logs(dag_id, run_id, logical_datetime, data) -> list:
+def get_validation_results_store(dag_id, run_id, logical_datetime, data) -> list:
     processed_logs: list[dict] = []
     append_log = processed_logs.append
 
