@@ -1,0 +1,26 @@
+{
+  "name": "mmix-postgresql-sync-connector",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "tasks.max": "2",
+    "topics": "mmix.mysql.source",
+    "connection.url": "jdbc:postgresql://postgres:5432/capture",
+    "connection.user": "capture",
+    "connection.password": "capture",
+    "auto.create": "false",
+    "auto.evolve": "false",
+    "insert.mode": "upsert",
+    "pk.mode": "record_key",
+    "delete.enabled": "true",
+    "transforms": "route,unwrap",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.route.regex": "mysql\\.mmix\\.(.*)",
+    "transforms.route.replacement": "mmix.$1",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.drop.tombstones": "false",
+    "transforms.unwrap.delete.handling.mode": "rewrite",
+    "errors.tolerance": "all",
+    "errors.log.enable": "true",
+    "errors.log.include.messages": "true"
+  }
+}

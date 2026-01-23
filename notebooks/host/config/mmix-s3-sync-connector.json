@@ -9,7 +9,7 @@
     "locale": "ko_KR",
     "timezone": "UTC",
     "topics.dir": "messaging/mmix",
-    "topics.regex": "mmix\\.mysql\\.source\\..*",
+    "topics.regex": "mmix\\.mysql\\mmix.\\.source\\..*",
     "partitioner.class": "io.confluent.connect.storage.partitioner.TimeBasedPartitioner",
     "format.class": "io.confluent.connect.s3.format.parquet.ParquetFormat",
     "parquet.codec": "zstd",
