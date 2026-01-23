@@ -11,7 +11,7 @@
     "database.server.name": "mmix-mysql-mmix-inventory",
     "database.include.list": "mmix",
     "snapshot.mode": "initial",
-    "topic.prefix": "mmix.mysql.mmix.source",
+    "topic.prefix": "mmix.mysql.source",
     "transforms": "unwrap",
     "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
     "transforms.unwrap.drop.tombstones": "true",
