@@ -20,7 +20,7 @@ _aws_conn_id = Variable.get("mmix-aws-conn-id")
 _environment = Variable.get("mmix-environment")
 _s3_bucket_name = Variable.get("mmix-aws-s3-workreduce-bucket-name")
 _livy_server_http_conn_id = Variable.get("mmix-livy-server-http-conn-id")
-_mysql_observability_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-primary-observability-conn-id"))
+_postgresql_observability_json = utils.build_postgresql_conn_json(Variable.get("mmix-postgresql-observability-conn-id"))
 
 
 def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None, extra_options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -67,7 +67,7 @@ def example_spark_deequ():
             "args": [
                 "--dag_id", kwargs["dag"].dag_id,
                 "--run_id", kwargs["run_id"],
-                "--secret", base64.b64encode(_mysql_observability_json.encode("utf-8")).decode("ascii"),
+                "--secret", base64.b64encode(_postgresql_observability_json.encode("utf-8")).decode("ascii"),
                 "--logical_datetime", kwargs["logical_date"].in_timezone("UTC").strftime("%Y-%m-%d %H:%M:%S"),
                 "--environment", _environment,
             ],

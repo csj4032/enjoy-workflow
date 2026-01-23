@@ -1,6 +1,7 @@
 import logging
 import great_expectations as gx
 from great_expectations.core.expectation_suite import ExpectationSuite
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
 def build_gx_pandas_validator(dataframe, suite_name: str = "pandas_suite", datasource_name: str = "pandas", asset_name: str = "pandas_asset", batch_def_name: str = "pandas_batch"):
@@ -14,15 +15,23 @@ def build_gx_pandas_validator(dataframe, suite_name: str = "pandas_suite", datas
     return validator
 
 
-def data_quality_logs(mysql_conn_id: str, dag_id: str, run_id: str, logical_datetime, data) -> None:
-    logging.info(f"data: {data}")
-    from airflow.providers.mysql.hooks.mysql import MySqlHook
-    hook = MySqlHook(mysql_conn_id=mysql_conn_id)
+def data_quality_logs(postgres_conn_id: str, dag_id: str, run_id: str, logical_datetime, data) -> None:
+    logging.info(f"postgres_conn_id : {postgres_conn_id}")
+    logging.info(f"Start inserting ETL analysis logs: {dag_id}, {run_id}, {logical_datetime}")
+    hook = PostgresHook(postgres_conn_id=postgres_conn_id)
     connection = hook.get_conn()
     logs = get_data_quality_logs(dag_id, run_id, logical_datetime, data)
     logging.info(f"Analysis Logs: {logs}")
     columns_ = ["run_name", "run_id", "entity", "instance", "name", "value", "logical_datetime"]
-    insert_query = f"INSERT INTO data_quality_logs ({', '.join(columns_)}) VALUES ({', '.join([f'%({col_})s' for col_ in columns_])}) ON DUPLICATE KEY UPDATE value = VALUES(value)"
+    insert_query = f"""
+        INSERT INTO dq_data_quality_logs ({", ".join(columns_)}) 
+        VALUES ({", ".join([f"%({c})s" for c in columns_])}) 
+        ON CONFLICT (run_id, entity, instance, name, run_name) 
+        DO UPDATE SET 
+            value = EXCLUDED.value,
+            logical_datetime = EXCLUDED.logical_datetime,
+            updated_at = CURRENT_TIMESTAMP;
+    """
     try:
         with connection.cursor() as cursor:
             cursor.executemany(insert_query, logs)
