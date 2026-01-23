@@ -104,7 +104,7 @@ def get_head_line_blocks(date: str, subject_articles: list[dict], limit: int = 2
     return blocks
 
 
-@dag(dag_id="example_news_crawling",
+@dag(dag_id="example_crawling_news",
      default_args={
          "start_date": datetime(2026, 1, 1),
          "retries": 0,
@@ -112,8 +112,8 @@ def get_head_line_blocks(date: str, subject_articles: list[dict], limit: int = 2
      },
      schedule="0 23-13 * * *",
      catchup=False,
-     tags=["Stock", "News", "Crawling", "Slack", "MMIX", "Example"])
-def example_news_crawling():
+     tags=["News", "Crawling", "Slack", "MMIX", "Example"])
+def example_crawling_news():
     start_task = EmptyOperator(task_id="start_task")
     end_task = EmptyOperator(task_id="end_task")
 
@@ -186,7 +186,7 @@ def example_news_crawling():
                     values = [row['subject'], row['keyword'], row['published'], row['title'], row['summary'], row['description'], row['original_link'], row['link']]
                     logging.info(f"load_to_aurora type: published:{row['published']} keyword:{row['keyword']} title:{len(row['title'])} link:{row['link']} original_link:{row['original_link']}")
                     values_list.append(tuple(values))
-                insert_query = "INSERT INTO external.news (subject, keyword, published, title, summary, description, original_link, link) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                insert_query = "INSERT INTO news (subject, keyword, published, title, summary, description, original_link, link) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
                 cursor.executemany(insert_query, values_list)
             connection.commit()
         except Exception as e:
@@ -217,10 +217,9 @@ def example_news_crawling():
     download_news_keyword_task = download_stock_keyword(_gcp_conn_id, _news_keyword_google_sheet_id, "시트1!A1:Z1000")
     crawling_naver_news_group_task = crawling_naver_news_group()
     merge_news_task = merge_naver_news()
-    load_to_mysql_task = load_to_mysql(_mysql_conn_id)
     head_line_send_to_slack_task = head_line_send_to_slack(_slack_conn_id, _slack_channel_id)
 
-    (start_task >> download_news_keyword_task >> crawling_naver_news_group_task >> merge_news_task >> load_to_mysql_task >> head_line_send_to_slack_task >> end_task)
+    (start_task >> download_news_keyword_task >> crawling_naver_news_group_task >> merge_news_task >> load_to_mysql(_mysql_conn_id) >> head_line_send_to_slack_task >> end_task)
 
 
-example_news_crawling()
+example_crawling_news()
