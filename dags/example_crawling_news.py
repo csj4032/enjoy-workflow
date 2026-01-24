@@ -80,7 +80,7 @@ def search_naver_news(subject: str, keyword: str, display=10, page=1, sort="date
         return []
 
 
-def get_head_line_blocks(date: str, subject_articles: list[dict], limit: int = 25) -> list[dict]:
+def get_head_line_blocks(date: str, subject_articles: list[dict], limit: int = 50) -> list[dict]:
     blocks = [{"type": "header", "text": {"type": "plain_text", "text": f"📰 {date} Stock Crawling"}}]
     seen_links = set()
     for group in subject_articles:
@@ -161,7 +161,7 @@ def example_crawling_news():
 
     @task(task_id="load_to_mysql")
     def load_to_mysql(mysql_conn_id: str, chuck: int = 10, **kwargs: Any) -> None:
-        logging.info("Loading data into Aurora MySQL")
+        logging.info("Loading data into MySQL")
         hook = MySqlHook(mysql_conn_id=mysql_conn_id)
         connection = None
         cursor = None
@@ -169,10 +169,10 @@ def example_crawling_news():
         dataframe_filtered = dataframe[dataframe["title"].notna() & dataframe["original_link"].notna() & (dataframe["title"].str.strip() != "") & (dataframe["original_link"].str.strip() != "")]
         dataframe_filtered["published"] = pd.to_datetime(dataframe_filtered["published"], errors="coerce").dt.tz_localize(None)
 
-        if len(dataframe_filtered) == 0:
-            logging.warning("No data to load into Aurora MySQL")
+        if len(dataframe) == 0 or len(dataframe_filtered) == 0:
+            logging.warning("No data to load into MySQL")
             return
-        logging.info(f"DataFrame to be loaded into Aurora: {dataframe_filtered.info()}")
+        logging.info(f"DataFrame to be loaded into : {dataframe_filtered.info()}")
         total = int(np.ceil(len(dataframe_filtered) / chuck))
         dataframe_group = chunk_generator(dataframe_filtered, chuck)
         try:
