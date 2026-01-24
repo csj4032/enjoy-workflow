@@ -43,11 +43,12 @@ def example_dbt_project():
         logging.info(f"mmix_event_daily : {kwargs['logical_date']}")
         vars_json = json.dumps(json.dumps({"from_ts": f"{kwargs['logical_date']}"}))
         cmd = (
-            f"bash -lc 'cd /home/dbt/projects/mmix && "
-            f"dbt run --profiles-dir /home/dbt/.dbt "
-            f"--target dev "
-            f"--select event_daily "
-            f"--vars {vars_json}'"
+            "dbt run "
+            "--project-dir /home/dbt/projects/mmix "
+            "--profiles-dir /home/dbt/.dbt "
+            "--target dev "
+            "--select event_daily "
+            f"--vars {vars_json}"
         )
         return run_remote_cmd(ssh_conn_id, cmd)
 
@@ -56,11 +57,12 @@ def example_dbt_project():
         logging.info(f"mmix_event_hourly : {kwargs['logical_date']}")
         vars_json = json.dumps(json.dumps({"from_ts": f"{kwargs['logical_date']}"}))
         cmd = (
-            f"bash -lc 'cd /home/dbt/projects/mmix && "
-            f"dbt run --profiles-dir /home/dbt/.dbt "
-            f"--target dev "
-            f"--select event_hourly "
-            f"--vars {vars_json}'"
+            "dbt run "
+            "--project-dir /home/dbt/projects/mmix "
+            "--profiles-dir /home/dbt/.dbt "
+            "--target dev "
+            "--select event_hourly "
+            f"--vars {vars_json}"
         )
         return run_remote_cmd(ssh_conn_id, cmd)
 
