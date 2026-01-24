@@ -24,7 +24,7 @@ def validation_results_store(postgres_conn_id: str, dag_id: str, run_id: str, lo
     logging.info(f"Analysis Logs: {logs}")
     columns_ = ["run_name", "run_id", "entity", "instance", "name", "value", "logical_datetime"]
     insert_query = f"""
-        INSERT INTO dq_data_quality_logs ({", ".join(columns_)}) 
+        INSERT INTO dq_validation_results_store ({", ".join(columns_)}) 
         VALUES ({", ".join([f"%({c})s" for c in columns_])}) 
         ON CONFLICT (run_id, entity, instance, name, run_name) 
         DO UPDATE SET 
