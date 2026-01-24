@@ -1,3 +1,5 @@
+import json
+import logging
 from datetime import datetime
 from datetime import timedelta
 
@@ -29,7 +31,7 @@ def run_remote_cmd(ssh_conn_id: str, command: str, timeout: int = 3600) -> str:
          "retries": 0,
          "retry_delay": timedelta(seconds=10),
      },
-     schedule=None,
+     schedule="0 * * * *",
      catchup=False,
      on_success_callback=slack_operator.build_dag_success_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
      on_failure_callback=slack_operator.build_dag_failure_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
@@ -37,34 +39,35 @@ def run_remote_cmd(ssh_conn_id: str, command: str, timeout: int = 3600) -> str:
      tags=["DBT", "Project", "MMIX", "External", "Example"])
 def example_dbt_project():
     @task
-    def dbt_version(ssh_conn_id: str) -> str:
-        cmd = r"dbt --version"
-        return run_remote_cmd(ssh_conn_id, cmd, timeout=60 * 60)
+    def event_daily(ssh_conn_id: str, **kwargs) -> str:
+        logging.info(f"mmix_event_daily : {kwargs['logical_date']}")
+        vars_json = json.dumps(json.dumps({"from_ts": f"{kwargs['logical_date']}"}))
+        cmd = (
+            f"bash -lc 'cd /home/dbt/projects/mmix && "
+            f"dbt run --profiles-dir /home/dbt/.dbt "
+            f"--target dev "
+            f"--select event_daily "
+            f"--vars {vars_json}'"
+        )
+        return run_remote_cmd(ssh_conn_id, cmd)
 
     @task
-    def dbt_debug(ssh_conn_id: str) -> str:
-        cmd = r"dbt debug --project-dir /home/dbt/projects/mmix --profiles-dir /home/dbt/.dbt --target dev"
-        return run_remote_cmd(ssh_conn_id, cmd, timeout=60 * 60)
-
-    @task
-    def dbt_run(ssh_conn_id: str) -> str:
-        cmd = r"dbt run --project-dir /home/dbt/projects/mmix --profiles-dir /home/dbt/.dbt --target dev"
-        return run_remote_cmd(ssh_conn_id, cmd, timeout=60 * 60)
-
-    @task
-    def dbt_test(ssh_conn_id: str) -> str:
-        cmd = r"dbt test --project-dir /home/dbt/projects/mmix --profiles-dir /home/dbt/.dbt --target dev"
-        return run_remote_cmd(ssh_conn_id, cmd, timeout=60 * 60)
-
-    @task
-    def dbt_test_external(ssh_conn_id: str) -> str:
-        cmd = r"dbt test --project-dir /home/dbt/projects/external --profiles-dir /home/dbt/.dbt --target dev"
-        return run_remote_cmd(ssh_conn_id, cmd, timeout=60 * 60)
+    def event_hourly(ssh_conn_id: str, **kwargs) -> str:
+        logging.info(f"mmix_event_hourly : {kwargs['logical_date']}")
+        vars_json = json.dumps(json.dumps({"from_ts": f"{kwargs['logical_date']}"}))
+        cmd = (
+            f"bash -lc 'cd /home/dbt/projects/mmix && "
+            f"dbt run --profiles-dir /home/dbt/.dbt "
+            f"--target dev "
+            f"--select event_hourly "
+            f"--vars {vars_json}'"
+        )
+        return run_remote_cmd(ssh_conn_id, cmd)
 
     start_task = EmptyOperator(task_id="start_empty")
     end_task = EmptyOperator(task_id="end_empty")
 
-    (start_task >> dbt_version(_ssh_conn_id) >> dbt_debug(_ssh_conn_id) >> dbt_run(_ssh_conn_id) >> dbt_test(_ssh_conn_id) >> dbt_test_external(_ssh_conn_id) >> end_task)
+    (start_task >> event_daily(_ssh_conn_id) >> event_hourly(_ssh_conn_id) >> end_task)
 
 
 example_dbt_project()
