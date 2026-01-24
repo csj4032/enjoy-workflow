@@ -1,0 +1,28 @@
+{
+  "name": "mmix-postgresql-mmix-sync-connector",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "tasks.max": "1",
+    "topics.regex": "^mmix\\.mysql\\.source\\.mmix\\.*$",
+    "connection.url": "jdbc:postgresql://postgresql.mmix.io:5432/capture",
+    "connection.user": "capture",
+    "connection.password": "capture",
+    "auto.create": "true",
+    "auto.evolve": "true",
+    "insert.mode": "upsert",
+    "pk.mode": "record_key",
+    "delete.enabled": "true",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://confluent-schema-registry.mmix.io:8081",
+    "value.converter.schema.registry.url": "http://confluent-schema-registry.mmix.io:8081",
+    "transforms": "route",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.route.regex": "mmix\\.mysql\\.source\\.mmix\\.(.*)",
+    "transforms.route.replacement": "$1",
+    "table.name.format": "mmix.${topic}",
+    "errors.tolerance": "all",
+    "errors.log.enable": "true",
+    "errors.log.include.messages": "true"
+  }
+}

@@ -1,9 +1,9 @@
 {
-  "name": "mmix-postgresql-sync-connector",
+  "name": "mmix-postgresql-external-sync-connector",
   "config": {
     "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
     "tasks.max": "1",
-    "topics.regex": "^mmix\\.mysql\\.source\\..*$",
+    "topics.regex": "^mmix\\.mysql\\.source\\.external\\.*$",
     "connection.url": "jdbc:postgresql://postgresql.mmix.io:5432/capture",
     "connection.user": "capture",
     "connection.password": "capture",
@@ -18,9 +18,9 @@
     "value.converter.schema.registry.url": "http://confluent-schema-registry.mmix.io:8081",
     "transforms": "route",
     "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
-    "transforms.route.regex": "mmix\\.mysql\\.source\\.mmix\\.(.*)",
+    "transforms.route.regex": "mmix\\.mysql\\.source\\.external\\.(.*)",
     "transforms.route.replacement": "$1",
-    "table.name.format": "mmix.${topic}",
+    "table.name.format": "external.${topic}",
     "errors.tolerance": "all",
     "errors.log.enable": "true",
     "errors.log.include.messages": "true"
