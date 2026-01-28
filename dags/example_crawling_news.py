@@ -31,18 +31,6 @@ _news_keyword_google_sheet_id = Variable.get("mmix-news-keyword-google-sheet-id"
 _gcp_conn_id = Variable.get("mmix-gcp-conn-id")
 _mysql_conn_id = Variable.get("mmix-mysql-primary-external-conn-id")
 _smtp_conn_id = Variable.get("mmix-smtp-conn-id")
-_default_headers = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7",
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache",
-    "Connection": "keep-alive",
-}
 
 
 def download_article(index: int, url: str, language="ko") -> str:
