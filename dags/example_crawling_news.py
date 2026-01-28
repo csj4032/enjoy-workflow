@@ -122,7 +122,7 @@ def chunk_list(items: list[dict], chunk_size: int) -> list[list[dict]]:
 
 
 @dag(
-    dag_id="example_crawling_news_optimized",
+    dag_id="example_crawling_news",
     default_args={
         "start_date": datetime(2026, 1, 1),
         "retries": 0,
@@ -132,7 +132,7 @@ def chunk_list(items: list[dict], chunk_size: int) -> list[list[dict]]:
     catchup=False,
     tags=["News", "Crawling", "Slack", "MMIX", "Optimized"],
 )
-def example_crawling_news_optimized():
+def example_crawling_news():
     start_task = EmptyOperator(task_id="start")
     end_task = EmptyOperator(task_id="end")
 
@@ -301,7 +301,7 @@ def example_crawling_news_optimized():
         return resp
 
     @task
-    def send_to_mail(rows: list[dict], keyword_records: list[dict], smtp_conn_id: str | None, **kwargs: Any) -> bool:
+    def send_to_mail(rows: list[dict], keyword_records_: list[dict], smtp_conn_id: str | None, **kwargs: Any) -> bool:
         if not smtp_conn_id:
             logging.info("[mail] smtp conn id not set - skip")
             return True
@@ -313,7 +313,7 @@ def example_crawling_news_optimized():
             logging.info("[mail] no recent news - skip")
             return True
 
-        html_content = render_news_email_content(rows, generated_at=generated_at, keyword_records=keyword_records)
+        html_content = render_news_email_content(rows, generated_at=generated_at, keyword_records=keyword_records_)
         with SmtpHook(smtp_conn_id=smtp_conn_id) as hook:
             hook.send_email_smtp(to=["csj4032@gmail.com"], subject=subject, html_content=html_content)
         return True
@@ -323,7 +323,7 @@ def example_crawling_news_optimized():
     items_per_job = search_naver_for_job.expand(job=search_jobs)
     items = flatten_items(items_per_job)
     chunks = chunk_items_task(items, chunk_size=10)
-    _ = download_and_upsert_chunk.expand(chunk=chunks, mysql_conn_id=[_mysql_conn_id] * 1000000)  # 리스트 길이는 Airflow가 맞춰줌
+    _ = download_and_upsert_chunk.expand(chunk=chunks, mysql_conn_id=[_mysql_conn_id] * 1000000)
     recent_rows = query_recent_news(_mysql_conn_id)
     slack_task = send_headline_to_slack(_slack_conn_id, _slack_channel_id, recent_rows)
     mail_task = send_to_mail(recent_rows, keyword_records, _smtp_conn_id)
@@ -331,4 +331,4 @@ def example_crawling_news_optimized():
     chunks >> _ >> recent_rows >> [slack_task, mail_task] >> end_task
 
 
-example_crawling_news_optimized()
+example_crawling_news()

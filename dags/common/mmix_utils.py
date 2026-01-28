@@ -1,5 +1,6 @@
 import html
 import json
+import re
 from collections import defaultdict
 from datetime import datetime
 
@@ -26,6 +27,19 @@ def strip_html(raw_html: str) -> str:
     if not isinstance(raw_html, str) or not raw_html.strip():
         return ""
     return html.unescape(BeautifulSoup(raw_html, "html.parser").get_text(separator=" ", strip=True))
+
+
+def strip_html_light(s: str) -> str:
+    if not isinstance(s, str) or not s.strip():
+        return ""
+    return re.compile(r"<[^>]+>").sub("", html.unescape(s)).strip()
+
+
+def parse_published_kst(published: str) -> datetime:
+    try:
+        return datetime.strptime(published, "%Y-%m-%d %H:%M:%S %z")
+    except Exception:
+        return datetime(1970, 1, 1, 0, 0, 0)
 
 
 def render_news_email_content(rows: list[dict[str, any]], title: str = "📰 Stock News Digest", generated_at: str | None = None, per_subject_limit: int = 25, keyword_records: list[dict[str, any]] | None = None) -> str:
