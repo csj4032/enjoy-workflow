@@ -23,7 +23,7 @@ from common import mmix_slack_operator as slack_operator
      catchup=False,
      on_success_callback=slack_operator.build_dag_success_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
      on_failure_callback=slack_operator.build_dag_failure_callback(Variable.get("mmix-slack-conn-id"), Variable.get("mmix-slack-channel-id")),
-     tags=["MMIX", "Connection", "Example"])
+     tags=["MMIX", "Connection", "Example!!!!!!!!$#@$%@#$%$#@%$#%!!!!!"])
 def example_connection():
     @task
     def connected_mysql_primary(mysql_conn_id: str) -> str:
