@@ -9,10 +9,10 @@ from airflow.providers.mysql.hooks.mysql import MySqlHook
 from airflow.sdk import dag, task, TriggerRule
 from elastic_transport import ObjectApiResponse
 
-from common import mmix_slack_operator as slack_operator
+from common import slack_operator
 
 
-@dag(dag_id="example_connection",
+@dag(dag_id="connection",
      default_args={
          "depends_on_past": False,
          "retries": 1,

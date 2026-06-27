@@ -13,8 +13,8 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag, task
 from pendulum import datetime
 
-from common import mmix_slack_operator as slack_operator
-from common import mmix_utils as utils
+from common import slack_operator
+from common import utils
 
 _aws_conn_id = Variable.get("mmix-aws-conn-id")
 _environment = Variable.get("mmix-environment")
@@ -39,7 +39,7 @@ def _http_json(conn_id: str, method: str, endpoint: str, data: Optional[Dict[str
     return json.loads(text) if text else {}
 
 
-@dag(dag_id="example_spark_deequ",
+@dag(dag_id="spark_deequ",
      default_args={
          "depends_on_past": False,
          "retries": None,

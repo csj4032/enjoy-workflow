@@ -8,7 +8,7 @@ from airflow.providers.ssh.hooks.ssh import SSHHook
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag, task
 
-from common import mmix_slack_operator as slack_operator
+from common import slack_operator
 
 _ssh_conn_id = Variable.get("mmix-dbt-server-ssh-conn-id")
 
@@ -25,7 +25,7 @@ def run_remote_cmd(ssh_conn_id: str, command: str, timeout: int = 3600) -> str:
     return out
 
 
-@dag(dag_id="example_dbt_project",
+@dag(dag_id="dbt_project",
      default_args={
          "start_date": datetime(2026, 1, 1),
          "retries": 0,

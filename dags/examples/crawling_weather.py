@@ -128,7 +128,7 @@ def load_to_mysql(mysql_conn_id: str, dataframe: pd.DataFrame, database: str, ta
         connection.close()
 
 
-@dag(dag_id="example_crawling_weather",
+@dag(dag_id="crawling_weather",
      default_args={
          "start_date": datetime(2026, 1, 1),
          "retries": 0,

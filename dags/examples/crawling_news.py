@@ -20,7 +20,7 @@ from airflow.utils.types import DagRunType
 from newspaper import Article
 from slack_sdk.web import SlackResponse
 
-from common.mmix_utils import strip_html, render_news_email_content
+from common.utils import strip_html, render_news_email_content
 
 _slack_conn_id = Variable.get("mmix-slack-conn-id")
 _slack_channel_id = Variable.get("mmix-slack-channel-id")
@@ -123,7 +123,7 @@ def get_head_line_blocks(date: str, subject_articles: list[dict], per_subject_li
     return blocks
 
 
-@dag(dag_id="example_crawling_news",
+@dag(dag_id="crawling_news",
      default_args={
          "start_date": datetime(2026, 1, 1),
          "retries": 0,

@@ -10,8 +10,8 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
 from pendulum import datetime
 
-from common import mmix_slack_operator as slack_operator
-from common import mmix_utils as utils
+from common import slack_operator
+from common import utils
 
 _slack_conn_id = Variable.get("mmix-slack-conn-id")
 _slack_channel_id = Variable.get("mmix-slack-channel-id")
@@ -23,7 +23,7 @@ _mysql_external_json = utils.build_mysql_conn_json(Variable.get("mmix-mysql-prim
 _postgresql_observability_json = utils.build_postgresql_conn_json(Variable.get("mmix-postgresql-observability-conn-id"))
 
 
-@dag(dag_id="example_spark_news",
+@dag(dag_id="spark_news",
      default_args={
          "depends_on_past": False,
          "retries": None,

@@ -8,11 +8,11 @@ from airflow.sdk import task, dag, Variable
 from faker import Faker
 from great_expectations.core.expectation_suite import ExpectationSuite
 
-from common import mmix_slack_operator as slack_operator
-from common import mmix_validator as mmix_validator
+from common import slack_operator
+from common import validator
 
 
-@dag(dag_id="example_great_expectations",
+@dag(dag_id="great_expectations",
      default_args={
          "depends_on_past": False,
          "retries": None,
@@ -59,7 +59,7 @@ def example_great_expectations():
         validator.expect_column_values_to_not_be_null("name")
         validator.expect_column_values_to_not_be_null("email")
         validator.expect_column_values_to_be_between("age", min_value=1, max_value=100)
-        mmix_validator.validation_results_store(Variable.get("mmix-postgresql-observability-conn-id"), kwargs["dag"].dag_id, kwargs["run_id"], kwargs["logical_date"], validator.validate())
+        validator.validation_results_store(Variable.get("mmix-postgresql-observability-conn-id"), kwargs["dag"].dag_id, kwargs["run_id"], kwargs["logical_date"], validator.validate())
 
     start_task = EmptyOperator(task_id="start_empty")
     end_task = EmptyOperator(task_id="end_empty")

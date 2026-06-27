@@ -27,7 +27,7 @@ def _col_letter(n: int) -> str:
     return s
 
 
-@dag(dag_id="example_s3_to_google",
+@dag(dag_id="s3_to_google",
      default_args={
          "start_date": datetime(2026, 1, 1),
          "retries": 0,
